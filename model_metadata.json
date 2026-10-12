@@ -1,0 +1,31 @@
+{
+  "model_name": "Soft-voting ensemble: word TF-IDF LogReg + hashed char TF-IDF MultinomialNB + hashed char TF-IDF calibrated LinearSVC",
+  "voting": "soft",
+  "weights": [
+    2,
+    1,
+    2
+  ],
+  "members": [
+    "word_tfidf+LogisticRegression",
+    "hashed_char(3-4)+MultinomialNB",
+    "hashed_char(3-4)+CalibratedLinearSVC"
+  ],
+  "seed": 42,
+  "test_metrics": {
+    "accuracy": 0.9900909681611436,
+    "precision": 0.9888354783687393,
+    "recall": 0.9922203205227944,
+    "f1": 0.9905250077663871,
+    "roc_auc": 0.9993343978561133,
+    "pr_auc": 0.9993610313577771
+  },
+  "baseline_test_metrics": {
+    "accuracy": 0.9870045484080572,
+    "precision": 0.983788791106994,
+    "recall": 0.991442352575074,
+    "f1": 0.9876007439553627,
+    "roc_auc": 0.9989026752182772,
+    "pr_auc": 0.998947383433215
+  }
+}
