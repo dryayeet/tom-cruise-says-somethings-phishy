@@ -13,5 +13,6 @@ pyvis
 python-dotenv
 ipykernel
 kagglehub
+huggingface-hub
 matplotlib
 seaborn

@@ -11,8 +11,9 @@ Constraints: CPU only, single process, peak RAM kept modest (hashing vectorizers
 | 0 | Baseline: word TF-IDF + LogReg | DONE | 0.9991 | 0.9989 | 0.9876 | 2.32 | superseded |
 | 1 | Soft-voting ensemble (3 branches) | DONE | 0.9993 | **0.9993** | 0.9905 | 18.33 | **YES (current)** |
 | 2 | Chi2 feature selection (k=30k) + LogReg | DONE | 0.9988 | 0.9986 | 0.9848 | 2.93 | NO |
-| 3 | Stacking (StackingClassifier, LogReg meta) | PLANNED | - | - | - | - | - |
-| 4 | Hybrid text + structural (HistGradientBoosting branch) | PLANNED | - | - | - | - | - |
+| 3 | Dataset v2 (Email4S) re-run of pipeline | DONE | 0.9993 | 0.9985 | - | - | NO (below incumbent) |
+| 4 | Stacking (StackingClassifier, LogReg meta) | PLANNED | - | - | - | - | - |
+| 5 | Hybrid text + structural (HistGradientBoosting branch) | PLANNED | - | - | - | - | - |
 
 ## Experiment 0: Baseline (word TF-IDF + Logistic Regression) - DONE
 
@@ -48,11 +49,20 @@ Design (RAM-bounded):
 - The dataset text is pre-normalized (lowercased, punctuation stripped): `upper_ratio` and `exclam_count` are all-zero (NaN correlation). Capitalization/punctuation-based phishing heuristics cannot be learned from this corpus.
 - Weak correlations with target: digit_ratio +0.048, url_count +0.034, avg_word_length +0.075 (phishing slightly shorter, more URL/digit-heavy), word_count -0.075. Structural signals exist but are weak for this corpus; text n-grams remain the dominant signal.
 
-## Experiment 3: Stacking - PLANNED
+## Experiment 3: Dataset v2 (HF Email4S) re-run - DONE, NOT DEPLOYED
+
+- Switched dataset version to v2_email4s (HF `zefang-liu/phishing-email-dataset`, ~18.6k raw-text emails, mixed case/punctuation; literal `null`/`empty` rows and duplicates dropped).
+- Same pipeline as exp 0-2 re-run on v2: baseline val/test ROC-AUC 0.9981/0.9976; ensemble (now with URL-count feature via FeatureUnion) 0.9993/0.9985.
+- Chi2 FS on v2: test ROC-AUC 0.9974 (below baseline, consistent with exp 2's conclusion).
+- Deployment guard worked as designed: incumbent v1 ensemble artifact (test ROC-AUC 0.9993) retained since 0.9985 < 0.9993.
+- Interpretation: the gap is dataset-driven (18.6k vs 82k rows, and the v1 dataset mixes more corpora), not model-driven. The architecture transfer (ensemble gain: +0.0009 test ROC-AUC over baseline on same data) confirms the ensemble design generalizes across datasets.
+- RAM note: the v2 corpus contains a ~195k-char outlier email; the URL-count transformer was fixed to stream strings with object dtype after `astype(str)` briefly attempted a ~9GB fixed-width unicode allocation.
+
+## Experiment 4: Stacking - PLANNED
 
 StackingClassifier over the exp-1 branches with LogisticRegression meta-learner, cv=5, stack_method='predict_proba'. Triggers only if further gains are needed. Cost ~5x single fit; watch near-duplicate leakage across folds. Ensemble 18 MB is acceptable, but stacking adds CV cost.
 
-## Experiment 4: Hybrid text + structural - PLANNED
+## Experiment 5: Hybrid text + structural - PLANNED
 
 Engineered structural features (link count, digit/uppercase ratios, length stats) feeding HistGradientBoostingClassifier, stacked with text branches. Caveat from EDA: this corpus has no capitalization/punctuation signal, so gains would come mostly from length/URL/digit features, which are only weakly correlated with the label. Low expected ROI on this dataset; revisit with a raw (non-normalized) corpus.
 
