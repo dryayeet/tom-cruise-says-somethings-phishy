@@ -7,7 +7,8 @@ Reference of current and alternative datasets for `phishing_ml.ipynb`. Selection
 | Version | Dataset | Rows | Text state | Notes |
 |---|---|---|---|---|
 | v1 | `phishing_email.csv` (Alam Kaggle) | ~82k | Normalized (lowercased, punctuation stripped) | What exps 0-2 were trained on; no case/punctuation signal |
-| v2 | HF `zefang-liu/phishing-email-dataset` (Email4S) | ~18.6k | Raw, mixed case/punctuation | Current dataset version; smaller, mostly same corpora families |
+| v2 | HF `zefang-liu/phishing-email-dataset` (Email4S) | ~18.6k | Raw, mixed case/punctuation | Exp 3; below incumbent, not deployed |
+| v3 | Per-source CSVs (local cache) | ~82k | Raw text + subject, original case | **Current dataset (exp 4, deployed)** |
 
 ## Strong candidates (not yet used)
 

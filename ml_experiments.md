@@ -12,8 +12,9 @@ Constraints: CPU only, single process, peak RAM kept modest (hashing vectorizers
 | 1 | Soft-voting ensemble (3 branches) | DONE | 0.9993 | **0.9993** | 0.9905 | 18.33 | **YES (current)** |
 | 2 | Chi2 feature selection (k=30k) + LogReg | DONE | 0.9988 | 0.9986 | 0.9848 | 2.93 | NO |
 | 3 | Dataset v2 (Email4S) re-run of pipeline | DONE | 0.9993 | 0.9985 | - | - | NO (below incumbent) |
-| 4 | Stacking (StackingClassifier, LogReg meta) | PLANNED | - | - | - | - | - |
-| 5 | Hybrid text + structural (HistGradientBoosting branch) | PLANNED | - | - | - | - | - |
+| 4 | Dataset v3 (per-source raw CSVs) + ensemble | DONE | 0.9995 | **0.9997** | 0.9940 | ~20 | **YES (current)** |
+| 5 | Stacking (StackingClassifier, LogReg meta) | PLANNED | - | - | - | - | - |
+| 6 | Hybrid text + structural (HistGradientBoosting branch) | PLANNED | - | - | - | - | - |
 
 ## Experiment 0: Baseline (word TF-IDF + Logistic Regression) - DONE
 
@@ -58,11 +59,20 @@ Design (RAM-bounded):
 - Interpretation: the gap is dataset-driven (18.6k vs 82k rows, and the v1 dataset mixes more corpora), not model-driven. The architecture transfer (ensemble gain: +0.0009 test ROC-AUC over baseline on same data) confirms the ensemble design generalizes across datasets.
 - RAM note: the v2 corpus contains a ~195k-char outlier email; the URL-count transformer was fixed to stream strings with object dtype after `astype(str)` briefly attempted a ~9GB fixed-width unicode allocation.
 
-## Experiment 4: Stacking - PLANNED
+## Experiment 4: Dataset v3 (per-source raw CSVs) - DONE, DEPLOYED
+
+- Rebuilt the training data from the locally cached per-source CSVs (CEAS_08, Enron, Ling, Nazario, Nigerian_Fraud, SpamAssassin; ~82k emails), using `subject + "\n" + body` raw text (original case/punctuation) instead of the normalized `phishing_email.csv`.
+- Same pipeline as exp 1 (3-branch soft-voting ensemble + URL-count feature), weight search again picked (2, 1, 2).
+- Baseline (word TF-IDF + LogReg) on v3: val ROC-AUC 0.9993, test 0.9994.
+- Ensemble on v3: val ROC-AUC 0.9995, test ROC-AUC 0.9997, PR-AUC 0.9997, accuracy 0.9938, F1 0.9940.
+- Deployment guard passed (0.9997 >= incumbent 0.9993) so the v3 ensemble is now the deployed `phishing_detector.joblib`; `model_metadata.json` updated with dataset version and metrics.
+- Gain drivers vs v1: raw casing/punctuation signal, subject-line signal, larger effective information content per email.
+
+## Experiment 5: Stacking - PLANNED
 
 StackingClassifier over the exp-1 branches with LogisticRegression meta-learner, cv=5, stack_method='predict_proba'. Triggers only if further gains are needed. Cost ~5x single fit; watch near-duplicate leakage across folds. Ensemble 18 MB is acceptable, but stacking adds CV cost.
 
-## Experiment 5: Hybrid text + structural - PLANNED
+## Experiment 6: Hybrid text + structural - PLANNED
 
 Engineered structural features (link count, digit/uppercase ratios, length stats) feeding HistGradientBoostingClassifier, stacked with text branches. Caveat from EDA: this corpus has no capitalization/punctuation signal, so gains would come mostly from length/URL/digit features, which are only weakly correlated with the label. Low expected ROI on this dataset; revisit with a raw (non-normalized) corpus.
 
@@ -70,4 +80,4 @@ Engineered structural features (link count, digit/uppercase ratios, length stats
 
 - Replace deployed artifact only when the challenger improves test ROC-AUC and PR-AUC without degrading validation metrics.
 - Calibration quality (Brier score) must be checked before deployment since the agentic pipeline weights the ML score at 0.45 in a 0.70-threshold fused verdict.
-- Current deployment: Experiment 1 ensemble (test ROC-AUC 0.9993, PR-AUC 0.9994). Remaining headroom to "perfect" is mostly label noise / genuinely ambiguous emails, not model capacity.
+- Current deployment: Experiment 4 ensemble on dataset v3 (test ROC-AUC 0.9997, PR-AUC 0.9997). Remaining headroom to "perfect" is mostly label noise / genuinely ambiguous emails, not model capacity.
