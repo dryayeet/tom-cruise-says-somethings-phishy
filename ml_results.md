@@ -68,7 +68,7 @@ Design (RAM-bounded):
 - Deployment guard passed (0.9997 >= incumbent 0.9993) so the v3 ensemble is now the deployed `phishing_detector.joblib`; `model_metadata.json` updated with dataset version and metrics.
 - Gain drivers vs v1: raw casing/punctuation signal, subject-line signal, larger effective information content per email.
 - **Artifact fix (post-deploy):** the first v3 export pickled `url_count_feature` from the notebook kernel's `__main__`, which made `joblib.load` fail in any fresh process (the agent notebook would crash at model load). The function moved to the importable repo module `phishing_model_utils.py` and the model was retrained; identical deterministic pipeline, identical metrics (test ROC-AUC 0.9997), redeployed. `phishing_model_utils.py` must remain importable wherever the artifact is loaded (run from the project root).
-- Post-swap fixture sanity: the ensemble is more conservative on the agent fixtures than the old model (phish 0.8351 vs 0.9803, legit 0.1797 vs 0.1603) but offline metrics are strictly better; verdicts/margins unaffected. Agent v4 run recorded in `results.md`.
+- Post-swap fixture sanity: the ensemble is more conservative on the agent fixtures than the old model (phish 0.8351 vs 0.9803, legit 0.1797 vs 0.1603) but offline metrics are strictly better; verdicts/margins unaffected. Agent v4 run recorded in `agentic_results.md`.
 
 ## Experiment 5: Stacking - PLANNED
 

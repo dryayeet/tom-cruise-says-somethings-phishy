@@ -156,13 +156,15 @@ agentic-phishing/
   requirements.txt            # venv dependencies
   .env                        # GEMINI / TAVILY / OTX / OPENROUTER keys (not for version control)
   .venv/                      # Python 3.13 virtualenv, registered as "Python (agentic-phishing)" kernel
-  results.md                  # run results, metrics, incident log, analysis
-  ml_experiments.md           # ML experiment log (datasets, architectures, metrics, deployments)
-  dataset_candidates.md       # survey of current + alternative training datasets
+  agentic_results.md          # agent run results, metrics, incident log, analysis
+  ml_architecture.md          # ML-layer architecture (developer reference)
+  ml_results.md               # ML experiment log (datasets, architectures, metrics, deployments)
+  dataset_candidates.md       # survey of current + alternative training datasets (gitignored)
+  project_report.md           # IEEE-format research report (system)
+  ml_project_report.md        # IEEE-format research report (ML layer)
   run_metrics.json            # machine-readable metrics of the latest instrumented run (gitignored)
   run_metrics_initial.json     # metrics of the first discovery run (gitignored)
   evidence_graph_phishing.html / evidence_graph_legit.html
-  evidence_graph_phishing.png # static snapshot of the phishing evidence graph
 ```
 
 ## 9. How to run
@@ -173,6 +175,6 @@ agentic-phishing/
 jupyter lab                                                    # or: jupyter notebook
 ```
 
-Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, run top to bottom. Keys are loaded from `.env` (required: `GEMINI_API_KEY`, `TAVILY_API_KEY`, `OTX_API_KEY`; optional: `OPENROUTER_API_KEY` for Jev). The model artifact loads from the notebook directory; `phishing_model_utils.py` must be importable (run from the project root). To retrain or benchmark the ML layer, run `phishing_ml.ipynb` (same kernel, project root); its `DATASET_VERSION` switch selects the training corpus, and a deployment guard only replaces `phishing_detector.joblib` when the challenger beats the incumbent artifact's test ROC-AUC. Experiment history: `ml_experiments.md`; dataset survey: `dataset_candidates.md`.
+Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, run top to bottom. Keys are loaded from `.env` (required: `GEMINI_API_KEY`, `TAVILY_API_KEY`, `OTX_API_KEY`; optional: `OPENROUTER_API_KEY` for Jev). The model artifact loads from the notebook directory; `phishing_model_utils.py` must be importable (run from the project root). To retrain or benchmark the ML layer, run `phishing_ml.ipynb` (same kernel, project root); its `DATASET_VERSION` switch selects the training corpus, and a deployment guard only replaces `phishing_detector.joblib` when the challenger beats the incumbent artifact's test ROC-AUC. ML architecture: `ml_architecture.md`; experiment history: `ml_results.md`; dataset survey: `dataset_candidates.md`; run results for the agent: `agentic_results.md`.
 
 Operational notes: run from the project directory (`Path.cwd()` resolves `.env` and the model); free-tier rate limits apply per Google project per model, RPD resets midnight Pacific; a suspicious email costs at most 4 Gemini calls and roughly 2 minutes (flash-lite brain) to 13 minutes (3.8-flash brain with default thinking); a clean email about 1-2 minutes.

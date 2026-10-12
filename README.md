@@ -2,7 +2,7 @@
 
 An agentic AI system that detects phishing emails, investigates suspicious indicators with live web search and threat intelligence, and produces evidence-backed, explainable verdicts. Built as a local Jupyter notebook pipeline: a supervised ML ensemble classifier (word TF-IDF + LogReg, hashed char n-grams + Naive Bayes, calibrated linear SVM, soft-voted with a URL-count feature; test ROC-AUC 0.9997), an independent decision model (Jev), and a Gemini-driven investigation agent are fused into a single risk score with a full audit trail.
 
-Final results - section 7 in @results.md.
+Final results - section 7 in @agentic_results.md.
 
 ```
 EMAIL -> parse + IOC extraction -> ML score -> header analysis -> Jev score
@@ -18,7 +18,7 @@ EMAIL -> parse + IOC extraction -> ML score -> header analysis -> Jev score
 | Microsoft typosquat credential phish | 0.835 |  1.00 |   1.00 | **0.926** | PHISHING          |  ~2.6 min |
 | Benign GitHub digest                 | 0.180 | 0.133 |   0.15 | **0.159** | LIKELY LEGITIMATE |  ~3.8 min |
 
-Budget-bounded: at most 4 Gemini calls per email (20 RPD free tier friendly), with a live-verified 429 fallback from `gemini-3.8-flash` to `gemini-3.1-flash-lite`. Full numbers, incident log, and analysis in `results.md`; the research write-up in `project_report.md`.
+Budget-bounded: at most 4 Gemini calls per email (20 RPD free tier friendly), with a live-verified 429 fallback from `gemini-3.8-flash` to `gemini-3.1-flash-lite`. Full numbers, incident log, and analysis in `agentic_results.md`; the research write-ups in `project_report.md` (system) and `ml_project_report.md` (ML layer).
 
 ## Repository layout
 
@@ -30,13 +30,14 @@ phishing_detector.joblib   pre-trained ML artifact (3-branch soft-voting ensembl
 requirements.txt           venv dependencies
 .env                       API keys (NOT for version control; see .gitignore)
 architecture.md            system architecture (developer reference)
-results.md                 instrumented run results, metrics, incident log
-ml_experiments.md           ML experiment log (datasets, architectures, metrics)
-dataset_candidates.md      survey of current + alternative training datasets
-project_report.md         IEEE-format research report
+ml_architecture.md          ML-layer architecture (developer reference)
+agentic_results.md          instrumented agent run results, metrics, incident log
+ml_results.md               ML experiment log (datasets, architectures, metrics)
+project_report.md          IEEE-format research report (system)
+ml_project_report.md       IEEE-format research report (ML layer)
+dataset_candidates.md      survey of current + alternative training datasets (gitignored)
 run_metrics.json           machine-readable metrics of the latest run (gitignored)
 evidence_graph_*.html     rendered evidence graphs (hierarchical, interactive)
-evidence_graph_*.png      static snapshots of the evidence graphs
 ```
 
 ## Setup
@@ -59,7 +60,7 @@ jupyter lab
 
 Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, and run all cells top to bottom. The notebook must run from the project root (`.env`, the model artifact, and `phishing_model_utils.py` resolve via the working directory).
 
-To retrain the ML model, run `phishing_ml.ipynb` from the project root with the same kernel. Its `DATASET_VERSION` switch selects the training corpus (`v3_per_source` = ~82k raw per-source emails via the locally cached Kaggle dataset, `v2_email4s` = HF Email4S, `v1_alam` = the normalized single-file CSV). A deployment guard only overwrites `phishing_detector.joblib` + `model_metadata.json` when the challenger beats the incumbent artifact's test ROC-AUC. Experiment history in `ml_experiments.md`; dataset survey in `dataset_candidates.md`.
+To retrain the ML model, run `phishing_ml.ipynb` from the project root with the same kernel. Its `DATASET_VERSION` switch selects the training corpus (`v3_per_source` = ~82k raw per-source emails via the locally cached Kaggle dataset, `v2_email4s` = HF Email4S, `v1_alam` = the normalized single-file CSV). A deployment guard only overwrites `phishing_detector.joblib` + `model_metadata.json` when the challenger beats the incumbent artifact's test ROC-AUC. Experiment history in `ml_results.md`; ML architecture in `ml_architecture.md`; dataset survey in `dataset_candidates.md`.
 
 ## Key configuration (inside the notebook)
 

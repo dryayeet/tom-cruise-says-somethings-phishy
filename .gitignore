@@ -22,6 +22,9 @@ dist/
 # Run metrics / artifacts
 run_metrics*.json
 
+# Dataset survey (local reference, not shipped)
+dataset_candidates.md
+
 # Jupyter
 .ipynb_checkpoints/
 
