@@ -1,0 +1,14 @@
+langgraph
+langchain-core
+langchain-google-genai
+langchain-tavily
+pydantic
+requests
+joblib
+scikit-learn
+xgboost
+networkx
+pandas
+pyvis
+python-dotenv
+ipykernel
