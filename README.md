@@ -32,6 +32,7 @@ results.md                 instrumented run results, metrics, incident log
 project_report.md         IEEE-format research report
 run_metrics.json           machine-readable metrics of the latest run
 evidence_graph_*.html     rendered evidence graphs (hierarchical, interactive)
+evidence_graph_*.png      static snapshots of the evidence graphs
 ```
 
 ## Setup

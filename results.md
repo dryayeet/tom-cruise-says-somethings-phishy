@@ -159,3 +159,7 @@ Everything the system produced for the `micros0ft-support.example` credential ph
 **Recommendation:** Do not click any links or provide credentials. Delete the email immediately. If you have already entered credentials on the linked site, change your password immediately and enable multi-factor authentication (MFA) on your actual Microsoft account.
 
 **Evidence graph:** `evidence_graph_phishing.html` — hierarchical left-to-right layout: EMAIL → sender/URL/domain → 5 header findings + 3 OTX nodes + 2 collapsed Tavily nodes → ML/Jev/Gemini model scores → PHISHING verdict (red). Full node/edge JSON in `run_metrics.json` → `phishing_run.evidence_graph_nodes/edges`.
+
+**Static snapshot** (`evidence_graph_phishing.png`, captured headlessly with Playwright driving Edge at 2x scale; the interactive original is the HTML):
+
+![Phishing evidence graph: pipeline from EMAIL through sender, URL, domain, header findings, OTX and Tavily evidence nodes, three model scores, to the PHISHING verdict](evidence_graph_phishing.png)
