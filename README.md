@@ -24,6 +24,7 @@ Budget-bounded: at most 4 Gemini calls per email (20 RPD free tier friendly), wi
 
 ```
 agentic_phishing.ipynb     the pipeline notebook (local Jupyter, no Colab)
+phishing_ml.ipynb           retraining notebook for the ML artifact (local Jupyter)
 phishing_detector.joblib   pre-trained ML artifact (TF-IDF + Logistic Regression)
 requirements.txt           venv dependencies
 .env                       API keys (NOT for version control; see .gitignore)
@@ -54,6 +55,8 @@ jupyter lab
 ```
 
 Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, and run all cells top to bottom. The notebook must run from the project root (`.env` and the model artifact resolve via the working directory).
+
+To retrain the ML model, run `phishing_ml.ipynb` from the project root with the same kernel. It downloads the Kaggle dataset via `kagglehub` (cached in the user home directory), trains the TF-IDF + Logistic Regression pipeline, and overwrites `phishing_detector.joblib` plus `model_metadata.json` in the project root.
 
 ## Key configuration (inside the notebook)
 
