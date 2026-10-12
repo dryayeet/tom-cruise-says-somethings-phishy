@@ -1,7 +1,6 @@
 # An Ensemble Text-Classifier for Phishing Email Detection with a Deployment Guard and a Fixed Inference Contract
 
-**lemon**
-Department of Computer Science and Engineering, Manipal Academy of Higher Education, Manipal, India
+Department of Computer Science and Engineering, Manipal Academy of Higher Education, Bengaluru, India
 
 ---
 
@@ -68,12 +67,12 @@ All experiments ran in the project venv (Python 3.13, scikit-learn 1.9, Windows)
 
 ### A. Headline Results (held-out test split)
 
-| Exp | Dataset | Model | Test ROC-AUC | Test PR-AUC | Test F1 | Deployed |
-|---|---|---|---:|---:|---:|---|
-| 0 | v1 normalized | TF-IDF + LogReg | 0.9989 | 0.9989 | 0.9876 | superseded |
-| 1 | v1 normalized | 3-branch ensemble | 0.9993 | 0.9994 | 0.9905 | later superseded |
-| 2 | v1 normalized | chi2 k=30k + LogReg | 0.9986 | 0.9986 | 0.9848 | no |
-| 3 | v2 Email4S | ensemble | 0.9985 | 0.9985 | - | no (guard) |
+| Exp         | Dataset                     | Model                          |     Test ROC-AUC |      Test PR-AUC |          Test F1 | Deployed                |
+| ----------- | --------------------------- | ------------------------------ | ---------------: | ---------------: | ---------------: | ----------------------- |
+| 0           | v1 normalized               | TF-IDF + LogReg                |           0.9989 |           0.9989 |           0.9876 | superseded              |
+| 1           | v1 normalized               | 3-branch ensemble              |           0.9993 |           0.9994 |           0.9905 | later superseded        |
+| 2           | v1 normalized               | chi2 k=30k + LogReg            |           0.9986 |           0.9986 |           0.9848 | no                      |
+| 3           | v2 Email4S                  | ensemble                       |           0.9985 |           0.9985 |                - | no (guard)              |
 | **4** | **v3 raw per-source** | **ensemble + URL count** | **0.9997** | **0.9997** | **0.9940** | **yes (current)** |
 
 ### B. Findings
