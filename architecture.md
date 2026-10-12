@@ -67,7 +67,7 @@ A LangGraph-orchestrated pipeline that classifies an email, prefetches threat in
 | `parse_email` | deterministic | Parses headers (From/Reply-To/Return-Path/Authentication-Results), extracts body. Strips leading whitespace so malformed raw emails still parse. |
 | `extract_iocs` | deterministic | Regex extraction of URLs, domains, IPs from subject + body + headers. |
 | `url_analysis` | deterministic | Heuristic URL scoring (IP host, punycode, `@`, length, depth, hyphens, keywords, suspicious TLDs). |
-| `ml_predict` | deterministic | `phishing_detector.joblib` (TF-IDF + Logistic Regression pipeline) on raw email text, phishing probability. |
+| `ml_predict` | deterministic | `phishing_detector.joblib` (3-branch soft-voting ensemble: word TF-IDF + LogReg, hashed char n-gram (3-4) + MultinomialNB, hashed char n-gram + calibrated LinearSVC, each branch with a URL-count feature; trained on ~82k raw per-source emails) on raw email text, phishing probability. Loads via `phishing_model_utils.py`. |
 | `header_analysis` | deterministic | SPF/DKIM/DMARC failure detection, Reply-To and Return-Path domain mismatch vs From. |
 | `jev` | external | OpenRouter alpha `decisions` API, model `~typesafe/jev-latest`. Returns 0-4 phishing score (normalized to 0-1) plus signals: urgency, credential_request, impersonation, suspicious_action. Optional; skipped without `OPENROUTER_API_KEY`. |
 | `ioc_prefetch` | deterministic | Runs OTX lookups for all extracted domains/URLs/IPs (deduplicated, capped at 8, parallel `ThreadPoolExecutor`, ~1-2s) *before* the agent runs, so the brain never spends its 2-round budget on mechanical lookups. |
@@ -150,16 +150,19 @@ Rendered by `render_evidence_graph(result, filename=None)`:
 ```
 agentic-phishing/
   agentic_phishing.ipynb     # the agentic pipeline notebook (local Jupyter)
-  phishing_detector.joblib   # pre-trained ML artifact (Notebook 1, TF-IDF + LogReg)
-  requirements.txt           # venv dependencies
-  .env                       # GEMINI / TAVILY / OTX / OPENROUTER keys (not for version control)
-  .venv/                     # Python 3.13 virtualenv, registered as "Python (agentic-phishing)" kernel
-  results.md                 # run results, metrics, incident log, analysis
-  run_metrics.json           # machine-readable metrics of the latest instrumented run
-  run_metrics_initial.json   # metrics of the first discovery run
+  phishing_ml.ipynb           # ML retraining notebook (Colab-free, dataset-version switchable)
+  phishing_model_utils.py     # shared module the ML artifact pickles by reference (url_count_feature)
+  phishing_detector.joblib    # pre-trained ML artifact (3-branch soft-voting ensemble)
+  requirements.txt            # venv dependencies
+  .env                        # GEMINI / TAVILY / OTX / OPENROUTER keys (not for version control)
+  .venv/                      # Python 3.13 virtualenv, registered as "Python (agentic-phishing)" kernel
+  results.md                  # run results, metrics, incident log, analysis
+  ml_experiments.md           # ML experiment log (datasets, architectures, metrics, deployments)
+  dataset_candidates.md       # survey of current + alternative training datasets
+  run_metrics.json            # machine-readable metrics of the latest instrumented run (gitignored)
+  run_metrics_initial.json     # metrics of the first discovery run (gitignored)
   evidence_graph_phishing.html / evidence_graph_legit.html
-  abstract.md                # original project spec
-  do_this.md                 # the architecture revision brief
+  evidence_graph_phishing.png # static snapshot of the phishing evidence graph
 ```
 
 ## 9. How to run
@@ -170,6 +173,6 @@ agentic-phishing/
 jupyter lab                                                    # or: jupyter notebook
 ```
 
-Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, run top to bottom. Keys are loaded from `.env` (required: `GEMINI_API_KEY`, `TAVILY_API_KEY`, `OTX_API_KEY`; optional: `OPENROUTER_API_KEY` for Jev). The model artifact loads from the notebook directory.
+Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, run top to bottom. Keys are loaded from `.env` (required: `GEMINI_API_KEY`, `TAVILY_API_KEY`, `OTX_API_KEY`; optional: `OPENROUTER_API_KEY` for Jev). The model artifact loads from the notebook directory; `phishing_model_utils.py` must be importable (run from the project root). To retrain or benchmark the ML layer, run `phishing_ml.ipynb` (same kernel, project root); its `DATASET_VERSION` switch selects the training corpus, and a deployment guard only replaces `phishing_detector.joblib` when the challenger beats the incumbent artifact's test ROC-AUC. Experiment history: `ml_experiments.md`; dataset survey: `dataset_candidates.md`.
 
 Operational notes: run from the project directory (`Path.cwd()` resolves `.env` and the model); free-tier rate limits apply per Google project per model, RPD resets midnight Pacific; a suspicious email costs at most 4 Gemini calls and roughly 2 minutes (flash-lite brain) to 13 minutes (3.8-flash brain with default thinking); a clean email about 1-2 minutes.

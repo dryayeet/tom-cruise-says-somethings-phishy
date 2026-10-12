@@ -1,8 +1,8 @@
 # Agentic Phishing Email Detection and Explanation System
 
-An agentic AI system that detects phishing emails, investigates suspicious indicators with live web search and threat intelligence, and produces evidence-backed, explainable verdicts. Built as a local Jupyter notebook pipeline: a supervised ML classifier, an independent decision model (Jev), and a Gemini-driven investigation agent are fused into a single risk score with a full audit trail.
+An agentic AI system that detects phishing emails, investigates suspicious indicators with live web search and threat intelligence, and produces evidence-backed, explainable verdicts. Built as a local Jupyter notebook pipeline: a supervised ML ensemble classifier (word TF-IDF + LogReg, hashed char n-grams + Naive Bayes, calibrated linear SVM, soft-voted with a URL-count feature; test ROC-AUC 0.9997), an independent decision model (Jev), and a Gemini-driven investigation agent are fused into a single risk score with a full audit trail.
 
-Final results - section 7 in @results.md. 
+Final results - section 7 in @results.md.
 
 ```
 EMAIL -> parse + IOC extraction -> ML score -> header analysis -> Jev score
@@ -15,8 +15,8 @@ EMAIL -> parse + IOC extraction -> ML score -> header analysis -> Jev score
 
 | Test email                           |    ML |   Jev | Gemini |        Combined | Verdict           | Wall time |
 | ------------------------------------ | ----: | ----: | -----: | --------------: | ----------------- | --------: |
-| Microsoft typosquat credential phish | 0.980 |  1.00 |   0.99 | **0.991** | PHISHING          |  ~2.3 min |
-| Benign GitHub digest                 | 0.160 | 0.133 |   0.05 | **0.120** | LIKELY LEGITIMATE |  ~2.3 min |
+| Microsoft typosquat credential phish | 0.835 |  1.00 |   1.00 | **0.926** | PHISHING          |  ~2.6 min |
+| Benign GitHub digest                 | 0.180 | 0.133 |   0.15 | **0.159** | LIKELY LEGITIMATE |  ~3.8 min |
 
 Budget-bounded: at most 4 Gemini calls per email (20 RPD free tier friendly), with a live-verified 429 fallback from `gemini-3.8-flash` to `gemini-3.1-flash-lite`. Full numbers, incident log, and analysis in `results.md`; the research write-up in `project_report.md`.
 
@@ -24,14 +24,17 @@ Budget-bounded: at most 4 Gemini calls per email (20 RPD free tier friendly), wi
 
 ```
 agentic_phishing.ipynb     the pipeline notebook (local Jupyter, no Colab)
-phishing_ml.ipynb           retraining notebook for the ML artifact (local Jupyter)
-phishing_detector.joblib   pre-trained ML artifact (TF-IDF + Logistic Regression)
+phishing_ml.ipynb           ML retraining notebook (dataset-version switchable, deploy guard)
+phishing_model_utils.py     shared module the ML artifact pickles by reference (must stay importable)
+phishing_detector.joblib   pre-trained ML artifact (3-branch soft-voting ensemble)
 requirements.txt           venv dependencies
 .env                       API keys (NOT for version control; see .gitignore)
 architecture.md            system architecture (developer reference)
 results.md                 instrumented run results, metrics, incident log
+ml_experiments.md           ML experiment log (datasets, architectures, metrics)
+dataset_candidates.md      survey of current + alternative training datasets
 project_report.md         IEEE-format research report
-run_metrics.json           machine-readable metrics of the latest run
+run_metrics.json           machine-readable metrics of the latest run (gitignored)
 evidence_graph_*.html     rendered evidence graphs (hierarchical, interactive)
 evidence_graph_*.png      static snapshots of the evidence graphs
 ```
@@ -54,9 +57,9 @@ python -m venv .venv
 jupyter lab
 ```
 
-Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, and run all cells top to bottom. The notebook must run from the project root (`.env` and the model artifact resolve via the working directory).
+Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, and run all cells top to bottom. The notebook must run from the project root (`.env`, the model artifact, and `phishing_model_utils.py` resolve via the working directory).
 
-To retrain the ML model, run `phishing_ml.ipynb` from the project root with the same kernel. It downloads the Kaggle dataset via `kagglehub` (cached in the user home directory), trains the TF-IDF + Logistic Regression pipeline, and overwrites `phishing_detector.joblib` plus `model_metadata.json` in the project root.
+To retrain the ML model, run `phishing_ml.ipynb` from the project root with the same kernel. Its `DATASET_VERSION` switch selects the training corpus (`v3_per_source` = ~82k raw per-source emails via the locally cached Kaggle dataset, `v2_email4s` = HF Email4S, `v1_alam` = the normalized single-file CSV). A deployment guard only overwrites `phishing_detector.joblib` + `model_metadata.json` when the challenger beats the incumbent artifact's test ROC-AUC. Experiment history in `ml_experiments.md`; dataset survey in `dataset_candidates.md`.
 
 ## Key configuration (inside the notebook)
 

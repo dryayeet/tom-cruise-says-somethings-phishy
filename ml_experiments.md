@@ -61,12 +61,14 @@ Design (RAM-bounded):
 
 ## Experiment 4: Dataset v3 (per-source raw CSVs) - DONE, DEPLOYED
 
-- Rebuilt the training data from the locally cached per-source CSVs (CEAS_08, Enron, Ling, Nazario, Nigerian_Fraud, SpamAssassin; ~82k emails), using `subject + "\n" + body` raw text (original case/punctuation) instead of the normalized `phishing_email.csv`.
+- Rebuilt the training data from the locally cached per-source CSVs (CEAS_08, Enron, Ling, Nazario, Nigerian_Fraud, SpamAssasin; ~82k emails), using `subject + "\n" + body` raw text (original case/punctuation) instead of the normalized `phishing_email.csv`.
 - Same pipeline as exp 1 (3-branch soft-voting ensemble + URL-count feature), weight search again picked (2, 1, 2).
 - Baseline (word TF-IDF + LogReg) on v3: val ROC-AUC 0.9993, test 0.9994.
 - Ensemble on v3: val ROC-AUC 0.9995, test ROC-AUC 0.9997, PR-AUC 0.9997, accuracy 0.9938, F1 0.9940.
 - Deployment guard passed (0.9997 >= incumbent 0.9993) so the v3 ensemble is now the deployed `phishing_detector.joblib`; `model_metadata.json` updated with dataset version and metrics.
 - Gain drivers vs v1: raw casing/punctuation signal, subject-line signal, larger effective information content per email.
+- **Artifact fix (post-deploy):** the first v3 export pickled `url_count_feature` from the notebook kernel's `__main__`, which made `joblib.load` fail in any fresh process (the agent notebook would crash at model load). The function moved to the importable repo module `phishing_model_utils.py` and the model was retrained; identical deterministic pipeline, identical metrics (test ROC-AUC 0.9997), redeployed. `phishing_model_utils.py` must remain importable wherever the artifact is loaded (run from the project root).
+- Post-swap fixture sanity: the ensemble is more conservative on the agent fixtures than the old model (phish 0.8351 vs 0.9803, legit 0.1797 vs 0.1603) but offline metrics are strictly better; verdicts/margins unaffected. Agent v4 run recorded in `results.md`.
 
 ## Experiment 5: Stacking - PLANNED
 

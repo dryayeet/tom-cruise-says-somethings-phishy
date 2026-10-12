@@ -5,7 +5,7 @@ Department of Computer Science and Engineering, Manipal Academy of Higher Educat
 
 ---
 
-**Abstract** — Traditional phishing email classifiers identify suspicious patterns but provide limited explanations for their predictions, while LLM-only solutions can produce unsupported conclusions and lack access to current threat intelligence. This paper presents an agentic system that combines a supervised TF-IDF + logistic regression classifier, an independent structured decision model (Jev), and a tool-using Gemini investigation agent within a LangGraph-orchestrated workflow. The agent autonomously queries live web search (Tavily) and threat intelligence (AlienVault OTX); deterministic IOC prefetching runs indicator lookups in parallel before the agent, and a per-project rate-limit router with model fallback keeps the system operational under free-tier quotas. Three independent scores are fused into a unified risk score with a verdict, a consensus-based confidence indicator, an evidence breakdown, and a hierarchical evidence graph. On instrumented end-to-end runs the system correctly classified both a typosquatting credential-phishing email (combined score 0.991) and a benign notification email (0.120), while respecting a hard budget of at most four Gemini calls per email and degrading gracefully under live quota exhaustion.
+**Abstract** — Traditional phishing email classifiers identify suspicious patterns but provide limited explanations for their predictions, while LLM-only solutions can produce unsupported conclusions and lack access to current threat intelligence. This paper presents an agentic system that combines a supervised soft-voting ensemble classifier, an independent structured decision model (Jev), and a tool-using Gemini investigation agent within a LangGraph-orchestrated workflow. The agent autonomously queries live web search (Tavily) and threat intelligence (AlienVault OTX); deterministic IOC prefetching runs indicator lookups in parallel before the agent, and a per-project rate-limit router with model fallback keeps the system operational under free-tier quotas. Three independent scores are fused into a unified risk score with a verdict, a consensus-based confidence indicator, an evidence breakdown, and a hierarchical evidence graph. The deployed classifier, a three-branch ensemble over word- and character-level text features plus a URL-count signal trained on roughly 82,000 raw emails, reaches a held-out ROC-AUC of 0.9997. On instrumented end-to-end runs the system correctly classified both a typosquatting credential-phishing email (combined score 0.926) and a benign notification email (0.159), while respecting a hard budget of at most four Gemini calls per email and degrading gracefully under live quota exhaustion.
 
 **Index Terms** — phishing detection, agentic AI, large language models, LangGraph, threat intelligence, explainability, score fusion.
 
@@ -59,7 +59,7 @@ Deterministic stages run before any LLM is invoked, so expensive calls always re
 
 ### C. Supervised Classifier
 
-A TF-IDF + logistic regression pipeline (`phishing_detector.joblib`), trained offline in a separate notebook on raw email text. Logistic regression over TF-IDF was chosen for the anchor role because its scores are stable, its inference is milliseconds, and it degrades predictably, unlike deep alternatives that need more data and tuning for marginal gain in this prototype's scope [6][10].
+The ML anchor (`phishing_detector.joblib`) is a three-branch soft-voting ensemble trained offline in a separate notebook: (1) word-level TF-IDF (1-2 grams, 50,000 features) feeding a logistic regression; (2) hashed character n-grams (3-4) feeding a multinomial Naive Bayes; (3) the same hashed character features feeding a Platt-calibrated linear SVM; each branch is additionally given a URL-count feature. The branches deliberately diversify the feature space (word statistics, character-level patterns robust to obfuscation, and margin-based separation), and their calibrated probabilities are averaged with weights tuned on a validation split (2/1/2). The model is trained on approximately 82,000 raw, unnormalized emails aggregated from six public corpora (CEAS'08, Enron, Ling-Spam, Nazario, Nigerian Fraud, SpamAssassin) using subject plus body text, with original casing and punctuation. Held-out performance: ROC-AUC 0.9997, PR-AUC 0.9997, F1 0.9940, improving on a single TF-IDF + logistic regression baseline (0.9989) under a fixed artifact contract (`predict_proba` on a raw text string) and a CPU/RAM training budget [13]. The ensemble was selected through a logged experiment series (dataset ablations, chi-square feature selection, and weight tuning) with a deployment guard that replaces the artifact only when a challenger beats the incumbent's held-out ROC-AUC.
 
 ### D. Jev Decision Model
 
@@ -105,28 +105,28 @@ Each run executed the complete graph end to end. The runner instrumented: per-st
 
 | Email | ML (M) | Jev (J) | Gemini (G) | Combined (S) | Confidence | Verdict |
 |---|---:|---:|---:|---:|---:|---|
-| Phishing | 0.9803 | 1.00 | 1.00 | **0.9911** | 0.9818 | PHISHING |
-| Legitimate | 0.1603 | 0.1325 | 0.05 | **0.1203** | 0.8329 | LIKELY LEGITIMATE |
+| Phishing | 0.8351 | 1.00 | 1.00 | **0.9258** | 0.8481 | PHISHING |
+| Legitimate | 0.1797 | 0.1325 | 0.15 | **0.1590** | 0.8215 | LIKELY LEGITIMATE |
 
-Both verdicts are correct and far from the 0.70 decision threshold. All subsystems individually pointed the right way on both emails, which the confidence metric reflects: near-total agreement plus a decisive margin for the phish; slightly lower agreement (ML's 0.16 above G's 0.05) on the legitimate email.
+Both verdicts are correct and far from the 0.70 decision threshold. All subsystems individually pointed the right way on both emails. The ML scores reflect the ensemble trained on raw per-source text, which is measurably stronger offline (ROC-AUC 0.9997 vs 0.9989 for the earlier baseline) though somewhat more conservative on the fixtures; margins and verdicts are unaffected.
 
 ### B. Call Budget and Latency
 
 | Run configuration | Brain model | Phishing wall time | Gemini calls/email |
 |---|---|---:|---:|
 | Pre-optimization, default thinking | gemini-3.8-flash | 771 s | 4 |
-| Pre-optimization, no tools needed | gemini-3.8-flash | 61 s | 3 |
-| Post-optimization (prefetch + capped thinking), fallback active | gemini-3.1-flash-lite | **136 s** | 4 |
+| Post-optimization, fallback throughout | gemini-3.1-flash-lite | 136 s | 4 |
+| Final (new ML model), fallback mid-run | 3.8-flash turn 1, flash-lite turn 2 | **158 s** | 4 |
 
-The dominant latency factor is the brain model and its thinking budget, not tool I/O. After the prefetch + thinking changes (and with quota forcing the brain onto flash-lite), the phishing path fell from ~13 minutes to ~2.3 minutes. Two observations qualify this: the 3.8-flash + `thinking_level="low"` pairing remains to be measured after quota reset, and the flash-lite brain was more tool-happy on the benign email (it ran one discretionary web search that the 3.8 brain skipped), though the verdict was unaffected.
+The dominant latency factor remains the brain model and its thinking budget, not tool I/O. In the final run the brain's first call succeeded on 3.8-flash with capped thinking, the second 429'd mid-run and switched to flash-lite; the benign email's brain 429'd on both calls and ran flash-lite throughout. Both verdicts were correct on every path.
 
 ### C. Agent Behavior
 
-In the final phishing run the brain made zero OTX calls (respecting the prefetch instruction) and spent its turns formulating two parallel, well-targeted Tavily queries (quoted-phrase lookups of the typosquatted domains), whose results (Microsoft's own anti-phishing guidance) fed directly into the final report's claims. This is the intended division of labor: deterministic lookups precomputed, agent turns spent on judgment. Across runs the agent exhibited path-level non-determinism at temperature 0 (different tool choices each run, same verdicts), which we consider acceptable for an evidence-gathering role but worth noting for reproducibility.
+In the final phishing run the brain made zero OTX calls (respecting the prefetch instruction) and spent its turns formulating a single well-targeted Tavily query combining quoted-phrase lookups of both typosquatted domains, whose results (Microsoft's own anti-phishing guidance) fed directly into the final report's claims. This is the intended division of labor: deterministic lookups precomputed, agent turns spent on judgment. Across runs the agent exhibited path-level non-determinism at temperature 0 (different tool choices each run, same verdicts), which we consider acceptable for an evidence-gathering role but worth noting for reproducibility.
 
 ### D. Resilience
 
-Live quota exhaustion converted the fallback router from a code path into a validated behavior: all brain calls 429'd, logged the model switch, and completed on flash-lite without pipeline failure. Additional graceful-degradation paths verified by construction or during incident testing: scorer failure (fusion reweights M+J), explainer failure (deterministic Python report), Jev unavailability (fusion reweights), and OTX 400s (clean "no intel" records).
+Live quota exhaustion converted the fallback router from a code path into a validated behavior, exercised in two distinct patterns: mid-run fallback (first brain call on 3.8-flash succeeds, the second 429's and switches to flash-lite) and full fallback (both brain calls 429 and the run completes on flash-lite). In all cases the model switch was logged and verdicts were unaffected. Additional graceful-degradation paths verified by construction or during incident testing: scorer failure (fusion reweights M+J), explainer failure (deterministic Python report), Jev unavailability (fusion reweights), and OTX 400s (clean "no intel" records).
 
 ### E. Limitations
 
