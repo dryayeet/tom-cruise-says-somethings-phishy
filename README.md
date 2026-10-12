@@ -2,6 +2,8 @@
 
 An agentic AI system that detects phishing emails, investigates suspicious indicators with live web search and threat intelligence, and produces evidence-backed, explainable verdicts. Built as a local Jupyter notebook pipeline: a supervised ML classifier, an independent decision model (Jev), and a Gemini-driven investigation agent are fused into a single risk score with a full audit trail.
 
+Final results - section 7 in @results.md. 
+
 ```
 EMAIL -> parse + IOC extraction -> ML score -> header analysis -> Jev score
      -> deterministic OTX prefetch -> Gemini agent brain (Tavily/OTX tools, max 2 turns)
@@ -11,10 +13,10 @@ EMAIL -> parse + IOC extraction -> ML score -> header analysis -> Jev score
 
 ## Results at a glance
 
-| Test email | ML | Jev | Gemini | Combined | Verdict | Wall time |
-|---|---:|---:|---:|---:|---|---:|
-| Microsoft typosquat credential phish | 0.980 | 1.00 | 0.99 | **0.991** | PHISHING | ~2.3 min |
-| Benign GitHub digest | 0.160 | 0.133 | 0.05 | **0.120** | LIKELY LEGITIMATE | ~2.3 min |
+| Test email                           |    ML |   Jev | Gemini |        Combined | Verdict           | Wall time |
+| ------------------------------------ | ----: | ----: | -----: | --------------: | ----------------- | --------: |
+| Microsoft typosquat credential phish | 0.980 |  1.00 |   0.99 | **0.991** | PHISHING          |  ~2.3 min |
+| Benign GitHub digest                 | 0.160 | 0.133 |   0.05 | **0.120** | LIKELY LEGITIMATE |  ~2.3 min |
 
 Budget-bounded: at most 4 Gemini calls per email (20 RPD free tier friendly), with a live-verified 429 fallback from `gemini-3.8-flash` to `gemini-3.1-flash-lite`. Full numbers, incident log, and analysis in `results.md`; the research write-up in `project_report.md`.
 
@@ -54,14 +56,14 @@ Open `agentic_phishing.ipynb`, select the **Python (agentic-phishing)** kernel, 
 
 ## Key configuration (inside the notebook)
 
-| Knob | Default | Effect |
-|---|---|---|
-| `MAX_AGENT_ROUNDS` | 2 | Brain call budget per email |
-| `USE_JEV` | True | OpenRouter decision model on/off |
-| `GEMINI_EXPLANATION` | True | Final narrative via Gemini; `False` = deterministic Python report (3-call budget) |
-| `ML_WEIGHT / JEV_WEIGHT / GEMINI_WEIGHT` | 0.45 / 0.25 / 0.30 | Fusion weights (renormalized when a subsystem is unavailable) |
-| `PHISHING_THRESHOLD` | 0.70 | Decision threshold |
-| `PRIMARY_BRAIN_MODEL / FALLBACK_BRAIN_MODEL` | gemini-3.8-flash / gemini-3.1-flash-lite | 429 fallback pair |
+| Knob                                           | Default                                  | Effect                                                                             |
+| ---------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| `MAX_AGENT_ROUNDS`                           | 2                                        | Brain call budget per email                                                        |
+| `USE_JEV`                                    | True                                     | OpenRouter decision model on/off                                                   |
+| `GEMINI_EXPLANATION`                         | True                                     | Final narrative via Gemini;`False` = deterministic Python report (3-call budget) |
+| `ML_WEIGHT / JEV_WEIGHT / GEMINI_WEIGHT`     | 0.45 / 0.25 / 0.30                       | Fusion weights (renormalized when a subsystem is unavailable)                      |
+| `PHISHING_THRESHOLD`                         | 0.70                                     | Decision threshold                                                                 |
+| `PRIMARY_BRAIN_MODEL / FALLBACK_BRAIN_MODEL` | gemini-3.8-flash / gemini-3.1-flash-lite | 429 fallback pair                                                                  |
 
 ## Operational notes
 

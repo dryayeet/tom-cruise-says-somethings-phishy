@@ -102,4 +102,60 @@ Fusion: `0.45(0.1603) + 0.25(0.1325) + 0.30(0.05) = 0.1203` → LIKELY LEGITIMAT
 
 **Evidence graphs.** 18 nodes / 19 edges (phishing) and 11 / 12 (legit) in a left-to-right pipeline layout: email → indicators → evidence → three model scores → verdict, colored by type with a legend, Tavily collapsed to one node per query. The full node/edge JSON is now persisted in `run_metrics.json` so graph styling can be iterated offline without API calls.
 
-**Next steps.** (1) After the RPD reset, run one phishing email on 3.8-flash with `thinking_level="low"` to close the latency attribution. (2) Run a labeled batch (20-50 emails) to tune threshold/weights and quantify flash-lite-vs-3.8 brain behavior. (3) Consider routing investigation by ML score (do_this.md §13) once false-negative impact can be measured.
+**Next steps.** (1) After the RPD reset, run one phishing email on 3.8-flash with `thinking_level="low"` to close the latency attribution. (2) Run a labeled batch (20-50 emails) to tune threshold/weights and quantify flash-lite-vs-3.8 brain behavior. (3) Consider routing investigation by ML score (skip external search for clearly benign mail; see `project_report.md`, Section VI) once false-negative impact can be measured.
+
+## 7. Appendix: complete final output for the phishing email (v3 run)
+
+Everything the system produced for the `micros0ft-support.example` credential phish, exactly as emitted by the pipeline.
+
+### Final scores and metrics
+
+| Metric | Value |
+|---|---:|
+| ML detector (M) | 0.9803 |
+| Jev (J) | 1.0000 (raw 4/4) |
+| Gemini investigation (G) | 1.0000 |
+| **Combined score (S)** | **0.9911** |
+| Threshold | 0.70 |
+| **Verdict** | **PHISHING** |
+| Confidence | 0.9818 |
+| Explanation source | gemini |
+| Wall time | 136.0 s |
+| Gemini calls | 4 (2 brain via 429 fallback + 1 scorer + 1 explainer, all flash-lite) |
+| Jev calls | 1 (950 in / 92 out tokens, cost ~$0.00004) |
+| Brain tokens (in/out) | 4,995 / 357 |
+| Tavily searches | 2 (brain-formulated) |
+| OTX lookups | 3 (deterministic prefetch, 0 errors) |
+| Evidence graph | 18 nodes / 19 edges |
+
+**Jev signals:** urgency 0.99, credential_request 0.92, impersonation 0.99, suspicious_action 0.99.
+
+**Agent tool calls (brain):** `tavily_search('"micros0ft-support.example" phishing')`, `tavily_search('"secure-account-login.example" phishing')` — both in parallel, zero redundant OTX calls.
+
+**Header findings:** SPF failed; DKIM failed; DMARC failed; From domain differs from Reply-To domain; From domain differs from Return-Path domain (header score 1.00).
+
+**URL findings:** `https://micros0ft-support.example/account/verify` — score 0.10, feature: security/account keywords (verify, account).
+
+### Gemini investigation reasons (evidence scorer)
+
+1. The sender domain 'micros0ft-support.example' uses a common typosquatting technique (replacing 'o' with '0') to impersonate Microsoft.
+2. Authentication checks (SPF, DKIM, DMARC) all failed, indicating the email is not authorized by the purported sender.
+3. The email employs high-pressure social engineering tactics, specifically threatening account suspension within 24 hours to induce panic.
+4. The Reply-To and Return-Path domains differ from the From domain, a classic indicator of malicious email routing.
+5. External research confirms that Microsoft does not use domains like 'micros0ft-support.example' for security alerts, and such patterns are explicitly identified as phishing indicators.
+
+### Final report (Gemini narrative + reasons + recommendation)
+
+> **Summary:** "This email is a confirmed phishing attempt designed to steal user credentials by impersonating Microsoft support."
+
+**Reasons:**
+
+1. The sender domain 'micros0ft-support.example' uses typosquatting (replacing 'o' with '0') to deceive recipients.
+2. Email authentication protocols (SPF, DKIM, and DMARC) all failed, confirming the message is unauthorized.
+3. The email uses high-pressure social engineering, threatening account suspension to force immediate action.
+4. The Reply-To and Return-Path domains do not match the From domain, which is a common indicator of malicious routing.
+5. External research confirms that Microsoft does not use this domain for security alerts and explicitly warns against such patterns.
+
+**Recommendation:** Do not click any links or provide credentials. Delete the email immediately. If you have already entered credentials on the linked site, change your password immediately and enable multi-factor authentication (MFA) on your actual Microsoft account.
+
+**Evidence graph:** `evidence_graph_phishing.html` — hierarchical left-to-right layout: EMAIL → sender/URL/domain → 5 header findings + 3 OTX nodes + 2 collapsed Tavily nodes → ML/Jev/Gemini model scores → PHISHING verdict (red). Full node/edge JSON in `run_metrics.json` → `phishing_run.evidence_graph_nodes/edges`.
